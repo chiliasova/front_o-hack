@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { BookedTrip, UserProfile } from '../api/types';
 import { formatDateDots, formatRub, nightsBetween, pluralize } from '../lib/format';
+import { Icon } from './Icon';
 import { SmartImg, Spinner } from './ui';
 
 type Action = 'early' | 'dates' | 'transfer';
@@ -36,33 +37,36 @@ export function MyTrips({ profile, refreshKey, onInquire, onPointsChanged }: Pro
 
   return (
     <section className="page">
-      <div className="page__head">
-        <h1>🧳 Мои поездки</h1>
+      <header className="page__head">
+        <div className="kicker">Личный кабинет</div>
+        <h1 className="display">
+          Мои <em>поездки</em>
+        </h1>
         {profile ? (
-          <p className="muted">
+          <p>
             {profile.name} · статус {profile.loyalty_tier} · кешбэк {profile.cashback_percent}%
             {profile.preferences.family ? ` · ${profile.preferences.family}` : ''}
           </p>
         ) : (
-          <p className="muted">Вы вошли как гость — здесь только поездки, оформленные в этой сессии.</p>
+          <p>Вы вошли как гость — здесь только поездки, оформленные в этой сессии.</p>
         )}
-      </div>
+      </header>
 
-      {error && <div className="hint hint--error">{error}</div>}
+      {error && <div className="notice notice--error">{error}</div>}
       {!trips && !error && (
         <div className="center">
           <Spinner />
         </div>
       )}
       {trips && trips.length === 0 && (
-        <div className="empty empty--small">
-          <div className="empty__art">🧭</div>
-          <h2>Пока нет поездок</h2>
+        <div className="blank">
+          <Icon name="compass" size={40} />
+          <h2>Пока ни одной поездки</h2>
           <p>Опишите путешествие агенту — после оформления оно появится здесь.</p>
         </div>
       )}
 
-      {upcoming.length > 0 && <h2 className="section-title">Активные</h2>}
+      {upcoming.length > 0 && <h2 className="section-title">Впереди</h2>}
       <div className="trips">
         {upcoming.map((t) => (
           <TripCard
@@ -78,7 +82,7 @@ export function MyTrips({ profile, refreshKey, onInquire, onPointsChanged }: Pro
         ))}
       </div>
 
-      {past.length > 0 && <h2 className="section-title">Прошедшие</h2>}
+      {past.length > 0 && <h2 className="section-title">Уже были</h2>}
       <div className="trips">
         {past.map((t) => (
           <TripCard key={t.id} trip={t} userId={userId} past />
@@ -137,51 +141,48 @@ function TripCard({
 
   return (
     <article className={`trip ${past ? 'trip--past' : ''}`}>
-      <SmartImg src={trip.photo} alt={trip.hotel_name} className="trip__photo" />
+      <SmartImg src={trip.photo} alt={trip.hotel_name} label={trip.destination} className="trip__photo" />
       <div className="trip__body">
         <div className="trip__top">
           <div>
-            <div className="muted">📍 {trip.destination}</div>
+            <span className="kicker">{trip.destination}</span>
             <h3>{trip.hotel_name}</h3>
-            <div className="muted">
-              📅 {formatDateDots(trip.check_in)} — {formatDateDots(trip.check_out)} · {nights}{' '}
+            <div className="trip__dates mono">
+              {formatDateDots(trip.check_in)} — {formatDateDots(trip.check_out)} · {nights}{' '}
               {pluralize(nights, 'ночь', 'ночи', 'ночей')}
             </div>
           </div>
-          <div className="trip__right">
-            <span className={`badge ${past ? 'badge--muted' : 'badge--success'}`}>{past ? 'Завершена' : 'Оплачена'}</span>
-            <code>{trip.booking_code}</code>
-            <b>{formatRub(trip.total_paid)}</b>
+          <div className="trip__stub">
+            <span className={`stamp ${past ? '' : 'stamp--paid'}`}>{past ? 'Завершена' : 'Оплачена'}</span>
+            <span className="mono">{trip.booking_code}</span>
+            <b className="mono">{formatRub(trip.total_paid)}</b>
           </div>
         </div>
 
         {trip.extras.length > 0 && (
-          <div className="amenities">
+          <ul className="extras">
             {trip.extras.map((x) => (
-              <span key={x} className="amenity">
-                ✓ {x}
-              </span>
+              <li key={x}>
+                <Icon name="check" size={14} /> {x}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
         {!past && (
           <>
             <div className="trip__actions">
-              <button className={`chip ${action === 'early' ? 'chip--active' : ''}`} onClick={() => setAction(action === 'early' ? null : 'early')}>
-                🕙 Запросить ранний заезд
+              <button className={action === 'early' ? 'is-active' : ''} onClick={() => setAction(action === 'early' ? null : 'early')}>
+                <Icon name="clock" size={16} /> Ранний заезд
               </button>
-              <button className={`chip ${action === 'dates' ? 'chip--active' : ''}`} onClick={() => setAction(action === 'dates' ? null : 'dates')}>
-                📅 Изменить даты
+              <button className={action === 'dates' ? 'is-active' : ''} onClick={() => setAction(action === 'dates' ? null : 'dates')}>
+                <Icon name="calendar" size={16} /> Изменить даты
               </button>
-              <button
-                className={`chip ${action === 'transfer' ? 'chip--active' : ''}`}
-                onClick={() => setAction(action === 'transfer' ? null : 'transfer')}
-              >
-                🚕 Добавить трансфер
+              <button className={action === 'transfer' ? 'is-active' : ''} onClick={() => setAction(action === 'transfer' ? null : 'transfer')}>
+                <Icon name="car" size={16} /> Добавить трансфер
               </button>
-              <button className="chip" onClick={onInquire}>
-                💬 Вопрос отельеру
+              <button onClick={onInquire}>
+                <Icon name="chat" size={16} /> Спросить у отеля
               </button>
             </div>
 
@@ -220,7 +221,7 @@ function TripCard({
                     </select>
                   </label>
                 )}
-                <button className="btn btn--primary" onClick={run} disabled={busy}>
+                <button className="btn btn--ink" onClick={run} disabled={busy}>
                   {busy ? <Spinner small /> : 'Отправить запрос'}
                 </button>
               </div>
@@ -228,7 +229,7 @@ function TripCard({
           </>
         )}
 
-        {result && <div className={`hint ${result.ok ? 'hint--success' : 'hint--error'}`}>{result.text}</div>}
+        {result && <div className={`notice ${result.ok ? 'notice--ok' : 'notice--error'}`}>{result.text}</div>}
       </div>
     </article>
   );

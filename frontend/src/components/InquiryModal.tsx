@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { api } from '../api/client';
 import type { UserProfile } from '../api/types';
+import { Icon } from './Icon';
 import { Modal, Spinner } from './ui';
 
 const CATEGORIES = [
-  { key: 'pets', label: '🐕 Питомцы' },
-  { key: 'early_checkin', label: '🕙 Ранний заезд' },
-  { key: 'kids', label: '🧸 Дети' },
-  { key: 'parking', label: '🅿️ Парковка' },
-  { key: 'other', label: '💬 Другое' },
+  { key: 'pets', label: 'Питомцы', icon: 'paw' },
+  { key: 'early_checkin', label: 'Ранний заезд', icon: 'clock' },
+  { key: 'kids', label: 'Дети', icon: 'kid' },
+  { key: 'parking', label: 'Парковка', icon: 'parking' },
+  { key: 'other', label: 'Другое', icon: 'chat' },
 ];
 
 function template(category: string, profile: UserProfile | null) {
@@ -66,32 +67,33 @@ export function InquiryModal({ hotelId, hotelName, profile, onClose }: Props) {
   };
 
   return (
-    <Modal title="Вопрос отельеру" onClose={onClose}>
-      <p className="muted">
-        AI-консьерж передаст вопрос в <b>{hotelName}</b> и вернётся с ответом прямо сюда.
-      </p>
+    <Modal kicker={hotelName} title="Спросить у отеля" onClose={onClose}>
+      <p className="fine">Агент передаст вопрос отельеру и принесёт ответ сюда — обычно это пара секунд.</p>
 
       {history.length > 0 && (
         <div className="qa">
           {history.map((h, i) => (
             <div key={i} className="qa__item">
               <div className="qa__q">{h.q}</div>
-              <div className="qa__a">🏨 {h.a}</div>
+              <div className="qa__a">
+                <span className="kicker">Отель</span>
+                {h.a.replace(/^Отельер ответил:\s*/, '')}
+              </div>
             </div>
           ))}
         </div>
       )}
 
       <form onSubmit={send} className="inquiry">
-        <div className="chips">
+        <div className="tabs">
           {CATEGORIES.map((c) => (
             <button
               type="button"
               key={c.key}
-              className={`chip ${category === c.key ? 'chip--active' : ''}`}
+              className={category === c.key ? 'is-active' : ''}
               onClick={() => pick(c.key)}
             >
-              {c.label}
+              <Icon name={c.icon} size={15} /> {c.label}
             </button>
           ))}
         </div>
@@ -103,7 +105,7 @@ export function InquiryModal({ hotelId, hotelName, profile, onClose }: Props) {
           aria-label="Вопрос"
         />
         {error && <div className="field-error">{error}</div>}
-        <button className="btn btn--primary" disabled={loading || !question.trim()}>
+        <button className="btn btn--ink" disabled={loading || !question.trim()}>
           {loading ? (
             <>
               <Spinner small /> Связываемся с отелем…

@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { api } from '../api/client';
 import type { PaymentMethod, TripPlan, UserProfile, Voucher } from '../api/types';
 import { formatDateShort, formatNum, formatRub, nightsBetween, pluralize } from '../lib/format';
+import { Icon } from './Icon';
 import { Modal, Spinner } from './ui';
 
 interface Props {
@@ -62,130 +63,148 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
 
   if (voucher) {
     return (
-      <Modal title="Поездка оформлена 🎉" onClose={onClose}>
-        <div className="voucher">
-          <div className="voucher__top">
-            <div>
-              <div className="eyebrow">Ваучер бронирования</div>
-              <div className="voucher__code">{voucher.booking_code}</div>
-              <div className="voucher__hotel">{voucher.hotel_name}</div>
-              <div className="muted">{voucher.dates}</div>
+      <Modal kicker="Готово" title="Хорошей поездки!" onClose={onClose}>
+        <div className="pass">
+          <div className="pass__main">
+            <div className="pass__brand">
+              <span>
+                О<em>!</em>дин запрос
+              </span>
+              <span className="kicker">ваучер бронирования</span>
             </div>
-            <div className="voucher__qr">
-              <QRCodeSVG value={voucher.qr_code_data} size={132} level="M" />
+            <div className="pass__code mono">{voucher.booking_code}</div>
+            <div className="pass__hotel">{voucher.hotel_name}</div>
+            <div className="pass__grid">
+              <div>
+                <span className="kicker">Даты</span>
+                <b className="mono">{voucher.dates}</b>
+              </div>
+              <div>
+                <span className="kicker">Оплачено</span>
+                <b className="mono">{formatRub(voucher.total_paid)}</b>
+              </div>
+              <div>
+                <span className="kicker">Начислим</span>
+                <b className="mono">+{formatNum(voucher.points_earned)}</b>
+              </div>
             </div>
           </div>
-          <div className="voucher__rows">
-            <div>
-              <span>Оплачено</span>
-              <b>{formatRub(voucher.total_paid)}</b>
-            </div>
-            <div>
-              <span>Начислим баллов «Банка снов»</span>
-              <b className="text-success">+{formatNum(voucher.points_earned)}</b>
-            </div>
+          <div className="pass__stub">
+            <QRCodeSVG value={voucher.qr_code_data} size={120} level="M" bgColor="transparent" fgColor="#16130f" />
+            <span className="kicker">на ресепшене</span>
           </div>
-          <p className="muted small">Покажите QR-код на ресепшене. Копия ваучера отправлена на {email}.</p>
-          <div className="row-actions">
-            <button className="btn btn--ghost" onClick={() => window.print()}>
-              🖨️ Распечатать
-            </button>
-            <button className="btn btn--primary" onClick={onOpenTrips}>
-              Перейти в «Мои поездки»
-            </button>
-          </div>
+        </div>
+        <p className="fine">Копия ваучера отправлена на {email}. Покажите QR-код при заселении.</p>
+        <div className="row-actions">
+          <button className="btn btn--ghost" onClick={() => window.print()}>
+            <Icon name="print" size={18} /> Распечатать
+          </button>
+          <button className="btn btn--ink" onClick={onOpenTrips}>
+            Мои поездки <Icon name="arrowRight" size={18} />
+          </button>
         </div>
       </Modal>
     );
   }
 
   return (
-    <Modal title="Оформление поездки" onClose={onClose}>
+    <Modal kicker={`${plan.destination} · ${formatDateShort(plan.check_in)} — ${formatDateShort(plan.check_out)}`} title="Оформление" onClose={onClose}>
       <form className="checkout" onSubmit={pay}>
-        <div className="estimate">
-          <div className="estimate__title">
-            Смета · {plan.destination}, {formatDateShort(plan.check_in)} – {formatDateShort(plan.check_out)}
-          </div>
-          <div className="estimate__row">
+        <section className="receipt">
+          <div className="receipt__row">
             <span>
-              🏨 {plan.hotel.name}, {nights} {pluralize(nights, 'ночь', 'ночи', 'ночей')}
+              {plan.hotel.name}, {nights} {pluralize(nights, 'ночь', 'ночи', 'ночей')}
             </span>
-            <span>{formatRub(pricing.hotel_total)}</span>
+            <i />
+            <b>{formatRub(pricing.hotel_total)}</b>
           </div>
           {plan.transport && pricing.transport_total > 0 && (
-            <div className="estimate__row">
+            <div className="receipt__row">
               <span>
-                {plan.transport.type === 'train' ? '🚆' : '✈️'} {plan.transport.carrier} × {plan.guests}
+                {plan.transport.type === 'train' ? 'Поезд' : 'Перелёт'} × {plan.guests}
               </span>
-              <span>{formatRub(pricing.transport_total)}</span>
+              <i />
+              <b>{formatRub(pricing.transport_total)}</b>
             </div>
           )}
           {plan.transfer && pricing.transfer_total > 0 && (
-            <div className="estimate__row">
-              <span>🚕 Трансфер «{plan.transfer.type}»</span>
-              <span>{formatRub(pricing.transfer_total)}</span>
+            <div className="receipt__row">
+              <span>Трансфер, {plan.transfer.type.toLowerCase()}</span>
+              <i />
+              <b>{formatRub(pricing.transfer_total)}</b>
             </div>
           )}
           {points > 0 && (
-            <div className="estimate__row text-success">
-              <span>🌙 Баллы «Банка снов»</span>
-              <span>−{formatRub(points)}</span>
+            <div className="receipt__row receipt__row--minus">
+              <span>Баллы «Банка снов»</span>
+              <i />
+              <b>−{formatRub(points)}</b>
             </div>
           )}
-        </div>
+        </section>
 
         {availablePoints > 0 ? (
-          <label className="toggle">
+          <label className="switch">
             <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
-            <span className="toggle__track" />
+            <span className="switch__track" />
             <span>
-              Списать {formatNum(availablePoints)} баллов «Банка снов» (−{formatRub(availablePoints)})
+              Списать <b>{formatNum(availablePoints)}</b> баллов «Банка снов»
+              <small>1 балл = 1 ₽</small>
             </span>
           </label>
         ) : (
-          <div className="hint">🌙 Войдите в профиль, чтобы копить и списывать баллы «Банка снов»</div>
+          <p className="fine">
+            <Icon name="moon" size={14} /> Войдите в профиль, чтобы копить и тратить баллы «Банка снов».
+          </p>
         )}
 
+        <fieldset className="fields">
+          <legend className="kicker">Кто едет</legend>
+          <label>
+            <span>Имя и фамилия</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          </label>
+          <label>
+            <span>Телефон</span>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
+          </label>
+          <label>
+            <span>Email для ваучера</span>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+          </label>
+        </fieldset>
 
-        <div className="fields">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя и фамилия" aria-label="Имя" />
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон" aria-label="Телефон" />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" aria-label="Email" />
-        </div>
-
-        <div className="pay-methods">
+        <fieldset>
+          <legend className="kicker">Оплата</legend>
+          <div className="segmented">
           {(
             [
-              ['card', '💳 Картой'],
-              ['sbp', '⚡ СБП'],
+              ['card', 'Картой'],
+              ['sbp', 'Через СБП'],
             ] as const
           ).map(([value, label]) => (
-            <label key={value} className={`pay-method ${method === value ? 'is-active' : ''}`}>
+            <label key={value} className={method === value ? 'is-active' : ''}>
               <input type="radio" name="pay" value={value} checked={method === value} onChange={() => setMethod(value)} />
               {label}
             </label>
           ))}
-        </div>
+          </div>
+        </fieldset>
 
         {error && <div className="field-error">{error}</div>}
 
-        <div className="checkout__total">
-          <div>
-            <small className="muted">К оплате</small>
-            <div className="checkout__sum">
-              {total !== pricing.total_price && <s>{formatRub(pricing.total_price)}</s>} <b>{formatRub(total)}</b>
-            </div>
-          </div>
-          <button className="btn btn--primary btn--lg" disabled={paying}>
-            {paying ? (
-              <>
-                <Spinner small /> Проводим оплату…
-              </>
-            ) : (
-              `Оплатить ${method === 'sbp' ? 'через СБП' : 'картой'}`
-            )}
-          </button>
-        </div>
+        <button className="btn btn--ink btn--block" disabled={paying}>
+          {paying ? (
+            <>
+              <Spinner small /> Проводим оплату…
+            </>
+          ) : (
+            <>
+              Оплатить {formatRub(total)}
+              {total !== pricing.total_price && <s>{formatRub(pricing.total_price)}</s>}
+            </>
+          )}
+        </button>
       </form>
     </Modal>
   );

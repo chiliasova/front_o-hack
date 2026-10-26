@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { TripPlan } from '../api/types';
 import { formatDateShort, formatRub } from '../lib/format';
+import { Icon } from './Icon';
 
 export interface ChatMessage {
   id: string;
@@ -9,13 +10,7 @@ export interface ChatMessage {
   plan?: TripPlan | null;
 }
 
-const THINKING = [
-  'Агент анализирует запрос…',
-  'Подбирает отели под ваши предпочтения…',
-  'Сверяет рейсы и поезда…',
-  'Проверяет стыковки и трансфер…',
-  'Считает итоговую стоимость…',
-];
+const STEPS = ['Разбираю запрос', 'Подбираю отели', 'Сверяю рейсы и поезда', 'Проверяю стыковки', 'Считаю итог'];
 
 interface Props {
   messages: ChatMessage[];
@@ -36,13 +31,13 @@ export function ChatPanel({ messages, loading, chips, activePlanId, greeting, on
   useEffect(() => {
     if (!loading) return;
     setStep(0);
-    const t = setInterval(() => setStep((s) => Math.min(s + 1, THINKING.length - 1)), 650);
+    const t = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 520);
     return () => clearInterval(t);
   }, [loading]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, step]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -54,62 +49,69 @@ export function ChatPanel({ messages, loading, chips, activePlanId, greeting, on
 
   return (
     <section className="chat">
+      <div className="chat__status">
+        <span className="live-dot" />
+        Агент на связи
+        <span className="chat__status-hint">ответ за ~3 секунды</span>
+      </div>
+
       <div className="chat__list" ref={listRef}>
         <div className="msg msg--agent">
-          <div className="msg__avatar">О!</div>
-          <div className="msg__bubble">{greeting}</div>
+          <div className="msg__who">Агент</div>
+          <p className="msg__text msg__text--lead">{greeting}</p>
         </div>
 
         {messages.map((m) => (
           <div key={m.id} className={`msg msg--${m.role}`}>
-            {m.role !== 'user' && <div className="msg__avatar">{m.role === 'error' ? '!' : 'О!'}</div>}
-            <div className="msg__bubble">
-              {m.text}
-              {m.plan && (
-                <button
-                  className={`plan-pill ${m.plan.id === activePlanId ? 'is-active' : ''}`}
-                  onClick={() => onOpenPlan(m.plan!)}
-                >
-                  <span>📍 {m.plan.destination}</span>
+            {m.role !== 'user' && <div className="msg__who">{m.role === 'error' ? 'Ошибка' : 'Агент'}</div>}
+            <p className="msg__text">{m.text}</p>
+            {m.plan && (
+              <button
+                className={`plan-ticket ${m.plan.id === activePlanId ? 'is-active' : ''}`}
+                onClick={() => onOpenPlan(m.plan!)}
+              >
+                <span className="plan-ticket__main">
+                  <b>{m.plan.destination}</b>
                   <span>
-                    {formatDateShort(m.plan.check_in)} – {formatDateShort(m.plan.check_out)}
+                    {formatDateShort(m.plan.check_in)} — {formatDateShort(m.plan.check_out)} · {m.plan.hotel.name}
                   </span>
+                </span>
+                <span className="plan-ticket__stub">
                   <b>{formatRub(m.plan.pricing.total_price)}</b>
-                  <span className="plan-pill__cta">{m.plan.id === activePlanId ? 'на холсте' : 'показать →'}</span>
-                </button>
-              )}
-              {m.role === 'error' && (
-                <button className="link-btn" onClick={onRetry}>
-                  Повторить
-                </button>
-              )}
-            </div>
+                  <span>{m.plan.id === activePlanId ? 'на холсте' : 'открыть'}</span>
+                </span>
+              </button>
+            )}
+            {m.role === 'error' && (
+              <button className="text-btn" onClick={onRetry}>
+                <Icon name="refresh" size={16} /> Повторить
+              </button>
+            )}
           </div>
         ))}
 
         {loading && (
           <div className="msg msg--agent">
-            <div className="msg__avatar msg__avatar--pulse">О!</div>
-            <div className="msg__bubble msg__bubble--thinking">
-              <span className="dots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span key={step} className="thinking-text">
-                {THINKING[step]}
-              </span>
-            </div>
+            <div className="msg__who">Агент работает</div>
+            <ol className="steps">
+              {STEPS.map((s, i) => (
+                <li key={s} className={i < step ? 'is-done' : i === step ? 'is-current' : ''}>
+                  <span className="steps__mark">{i < step ? <Icon name="check" size={12} /> : null}</span>
+                  {s}
+                </li>
+              ))}
+            </ol>
           </div>
         )}
       </div>
 
       <div className="chat__bottom">
         {chips.length > 0 && (
-          <div className="chips">
+          <div className="suggest">
             {chips.map((c) => (
-              <button key={c} className="chip" disabled={loading} onClick={() => onSend(c)}>
+              <button key={c} className="suggest__item" disabled={loading} onClick={() => onSend(c)}>
                 {c}
+                <Icon name="arrowUpRight" size={14} />
               </button>
             ))}
           </div>
@@ -118,11 +120,11 @@ export function ChatPanel({ messages, loading, chips, activePlanId, greeting, on
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Опишите поездку одним запросом…"
+            placeholder="Куда, когда, с кем и на какой бюджет?"
             aria-label="Сообщение агенту"
           />
-          <button className="btn btn--primary composer__send" disabled={!text.trim() || loading} aria-label="Отправить">
-            ➤
+          <button className="composer__send" disabled={!text.trim() || loading} aria-label="Отправить">
+            <Icon name="arrowUp" size={20} />
           </button>
         </form>
       </div>

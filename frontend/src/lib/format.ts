@@ -37,22 +37,23 @@ export function uuid() {
   });
 }
 
+// icon — имя из components/Icon.tsx
 export const AMENITY_LABELS: Record<string, { icon: string; label: string }> = {
-  wifi: { icon: '📶', label: 'Wi‑Fi' },
-  pool: { icon: '🏊', label: 'Бассейн' },
-  pool_heated: { icon: '♨️', label: 'Подогреваемый бассейн' },
-  spa: { icon: '💆', label: 'SPA' },
-  kids_club: { icon: '🧸', label: 'Детский клуб' },
-  breakfast_included: { icon: '🥐', label: 'Завтрак включён' },
-  all_inclusive: { icon: '🍹', label: 'Всё включено' },
-  pet_friendly: { icon: '🐕', label: 'Можно с питомцем' },
-  beach: { icon: '🏖️', label: 'Свой пляж' },
-  parking: { icon: '🅿️', label: 'Парковка' },
-  gym: { icon: '🏋️', label: 'Фитнес' },
-  aquapark: { icon: '🌊', label: 'Аквапарк' },
-  city_center: { icon: '🏛️', label: 'Центр города' },
-  restaurant: { icon: '🍽️', label: 'Ресторан' },
-  rooftop: { icon: '🌇', label: 'Терраса на крыше' },
+  wifi: { icon: 'wifi', label: 'Wi‑Fi' },
+  pool: { icon: 'pool', label: 'Бассейн' },
+  pool_heated: { icon: 'pool', label: 'Подогреваемый бассейн' },
+  spa: { icon: 'spa', label: 'SPA' },
+  kids_club: { icon: 'kid', label: 'Детский клуб' },
+  breakfast_included: { icon: 'coffee', label: 'Завтрак включён' },
+  all_inclusive: { icon: 'fork', label: 'Всё включено' },
+  pet_friendly: { icon: 'paw', label: 'Можно с питомцем' },
+  beach: { icon: 'beach', label: 'Свой пляж' },
+  parking: { icon: 'parking', label: 'Парковка' },
+  gym: { icon: 'gym', label: 'Фитнес' },
+  aquapark: { icon: 'wave', label: 'Аквапарк' },
+  city_center: { icon: 'building', label: 'Центр города' },
+  restaurant: { icon: 'fork', label: 'Ресторан' },
+  rooftop: { icon: 'sunset', label: 'Терраса на крыше' },
 };
 
-export const amenity = (key: string) => AMENITY_LABELS[key] ?? { icon: '✔️', label: key };
+export const amenity = (key: string) => AMENITY_LABELS[key] ?? { icon: 'check', label: key };

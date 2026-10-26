@@ -103,14 +103,14 @@ export default function App() {
   const pickDeal = (deal: HotDeal) => send(`Хочу горящий тур: ${deal.hotel_name}, ${deal.destination}`);
 
   const greeting = useMemo(() => {
-    if (!profile) return 'Привет! Я агент «О!дин запрос». Опишите поездку одной фразой — подберу отель, билеты и трансфер и проверю все стыковки.';
+    if (!profile) return 'Здравствуйте! Расскажите, куда хочется, — одной фразой, как другу. Я соберу отель, дорогу и трансфер и проверю, чтобы всё сходилось по времени.';
     const first = profile.name.split(' ')[0];
     const notes = [
       profile.preferences.family,
       profile.preferences.has_pets && profile.preferences.pet_details,
       profile.preferences.has_schengen_visa && 'есть шенгенская виза',
     ].filter(Boolean);
-    return `Здравствуйте, ${first}! Помню ваши предпочтения: ${notes.join(', ')}. Куда отправимся?`;
+    return `${first}, здравствуйте! Помню про вас: ${notes.join(', ').toLowerCase()}. Куда на этот раз?`;
   }, [profile]);
 
   const chips = messages.length === 0 ? STARTER_CHIPS[profileKey] : (suggestions ?? []);
@@ -130,10 +130,10 @@ export default function App() {
         <main className={`split split--${mobilePane}`}>
           <div className="mobile-switch">
             <button className={mobilePane === 'chat' ? 'is-active' : ''} onClick={() => setMobilePane('chat')}>
-              💬 Чат
+              Чат
             </button>
             <button className={mobilePane === 'canvas' ? 'is-active' : ''} onClick={() => setMobilePane('canvas')}>
-              🗺️ Поездка{plan ? ' •' : ''}
+              Поездка{plan ? <i className="dot" /> : null}
             </button>
           </div>
           <ChatPanel

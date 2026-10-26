@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { HotDeal } from '../api/types';
 import { formatDateShort, formatRub } from '../lib/format';
+import { Icon } from './Icon';
 import { SmartImg, Spinner, Stars } from './ui';
 
 export function HotDeals({ onPick }: { onPick: (deal: HotDeal) => void }) {
@@ -20,16 +21,19 @@ export function HotDeals({ onPick }: { onPick: (deal: HotDeal) => void }) {
 
   return (
     <section className="page">
-      <div className="page__head">
-        <h1>🔥 Горящие туры</h1>
-        <p className="muted">Агент каждый час ищет падение цен и свободные номера. Нажмите на тур — он соберёт поездку целиком.</p>
-      </div>
+      <header className="page__head">
+        <div className="kicker">Обновляется каждый час</div>
+        <h1 className="display">
+          Горящие <em>сейчас</em>
+        </h1>
+        <p>Агент следит за падением цен и освободившимися номерами. Выберите предложение — он соберёт к нему дорогу и трансфер.</p>
+      </header>
 
       {error && (
-        <div className="hint hint--error">
-          {error}{' '}
-          <button className="link-btn" onClick={load}>
-            Повторить
+        <div className="notice notice--error">
+          {error}
+          <button className="text-btn" onClick={load}>
+            <Icon name="refresh" size={16} /> Повторить
           </button>
         </div>
       )}
@@ -40,25 +44,29 @@ export function HotDeals({ onPick }: { onPick: (deal: HotDeal) => void }) {
       )}
 
       <div className="deals">
-        {deals?.map((d) => (
-          <article key={d.id} className="deal">
+        {deals?.map((d, i) => (
+          <article key={d.id} className={`deal ${i === 0 ? 'deal--feature' : ''}`}>
             <div className="deal__photo">
-              <SmartImg src={d.photo} alt={d.hotel_name} />
-              <span className="deal__discount">−{d.discount_percent}%</span>
-              <span className="deal__until">до {formatDateShort(d.valid_until)}</span>
+              <SmartImg src={d.photo} alt={d.hotel_name} label={d.destination} />
+              <span className="deal__stamp">
+                <b>−{d.discount_percent}%</b>
+                <small>до {formatDateShort(d.valid_until)}</small>
+              </span>
             </div>
             <div className="deal__body">
-              <div className="muted">📍 {d.destination}</div>
+              <div className="deal__place">
+                <span className="kicker">{d.destination}</span>
+                <Stars n={d.stars} />
+              </div>
               <h3>{d.hotel_name}</h3>
-              <Stars n={d.stars} />
-              <p className="deal__reason">⏳ {d.reason}</p>
+              <p className="deal__reason">{d.reason}</p>
               <div className="deal__foot">
-                <div>
-                  <s className="muted">{formatRub(d.original_price)}</s>
-                  <b className="deal__price">{formatRub(d.hot_price)}</b>
+                <div className="deal__prices">
+                  <s>{formatRub(d.original_price)}</s>
+                  <b>{formatRub(d.hot_price)}</b>
                 </div>
-                <button className="btn btn--hot" onClick={() => onPick(d)}>
-                  Собрать тур
+                <button className="btn btn--ink" onClick={() => onPick(d)}>
+                  Собрать тур <Icon name="arrowRight" size={16} />
                 </button>
               </div>
             </div>

@@ -1,0 +1,13 @@
+# Пример сервиса для общего docker-compose.yml в корне репозитория.
+# Локально фронт можно поднять отдельно: docker compose -f frontend/docker-compose.frontend.yml up --build
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_MODE: auto
+    ports:
+      - "8080:8080"
+    environment:
+      BACKEND_URL: http://backend:8000
+    restart: unless-stopped

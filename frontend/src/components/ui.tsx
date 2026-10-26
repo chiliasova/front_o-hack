@@ -6,11 +6,13 @@ export function Modal({
   kicker,
   onClose,
   children,
+  wide,
 }: {
   title: ReactNode;
   kicker?: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -24,7 +26,7 @@ export function Modal({
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true">
+      <div className={`modal ${wide ? 'modal--wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal__head">
           <div>
             {kicker && <div className="kicker">{kicker}</div>}

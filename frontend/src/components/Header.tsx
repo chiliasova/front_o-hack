@@ -9,6 +9,8 @@ export type View = 'planner' | 'deals' | 'trips';
 interface Props {
   view: View;
   onView: (v: View) => void;
+  onNew: () => void;
+  hasRequest: boolean;
   profileKey: DemoProfile['key'];
   onProfile: (k: DemoProfile['key']) => void;
   profile: UserProfile | null;
@@ -16,12 +18,12 @@ interface Props {
 }
 
 const NAV: { key: View; label: string }[] = [
-  { key: 'planner', label: 'Подбор' },
+  { key: 'planner', label: 'Запрос' },
   { key: 'deals', label: 'Горящие' },
   { key: 'trips', label: 'Мои поездки' },
 ];
 
-export function Header({ view, onView, profileKey, onProfile, profile, dataSource }: Props) {
+export function Header({ view, onView, onNew, hasRequest, profileKey, onProfile, profile, dataSource }: Props) {
   const initials = profile
     ? profile.name
         .split(' ')
@@ -32,43 +34,38 @@ export function Header({ view, onView, profileKey, onProfile, profile, dataSourc
 
   return (
     <header className="header">
-      <button className="logo" onClick={() => onView('planner')} aria-label="На главную">
-        <span className="logo__mark">
-          О<em>!</em>
-        </span>
-        <span className="logo__text">
-          <b>
-            О<em>!</em>дин запрос
-          </b>
-          <small>агент путешествий Островка</small>
-        </span>
+      <button className="brand" onClick={onNew} aria-label="Новый запрос">
+        <i>О!</i>
+        <b>дин запрос</b>
       </button>
 
       <nav className="nav">
         {NAV.map((n) => (
-          <button key={n.key} className={`nav__item ${view === n.key ? 'is-active' : ''}`} onClick={() => onView(n.key)}>
-            {n.key === 'deals' && <Icon name="flame" size={16} />}
+          <button key={n.key} className={`nav__item ${view === n.key ? 'is-on' : ''}`} onClick={() => onView(n.key)}>
             {n.label}
           </button>
         ))}
+        {hasRequest && (
+          <button className="nav__new" onClick={onNew} title="Начать новый запрос">
+            <Icon name="plus" size={14} /> новый
+          </button>
+        )}
       </nav>
 
       <div className="header__right">
         {dataSource === 'mock' && (
           <span className="demo-flag" title="Бэкенд недоступен — показываем демо-ответы">
-            демо
+            демо-данные
           </span>
         )}
         {profile && (
-          <span className="points" title={`Баллы «Банка снов», кешбэк ${profile.cashback_percent}%`}>
-            <Icon name="moon" size={16} />
-            <b>{formatNum(profile.loyalty_points)}</b>
-            <span className="points__label">снов</span>
-            <span className="points__tier">{profile.loyalty_tier}</span>
+          <span className="points" title={`Баллы «Банка снов» · статус ${profile.loyalty_tier} · кешбэк ${profile.cashback_percent}%`}>
+            {formatNum(profile.loyalty_points)} снов
           </span>
         )}
-        <label className="profile">
+        <label className="profile" title="Демо-профиль">
           <span className="profile__avatar">{initials}</span>
+          <span className="profile__name">{DEMO_PROFILES.find((p) => p.key === profileKey)?.short}</span>
           <select value={profileKey} onChange={(e) => onProfile(e.target.value as DemoProfile['key'])} aria-label="Демо-профиль">
             {DEMO_PROFILES.map((p) => (
               <option key={p.key} value={p.key}>

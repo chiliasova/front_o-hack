@@ -696,6 +696,87 @@ kbd {
   display: none;
 }
 
+/* черновик запроса: поиск только по кнопке */
+.draft-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+  max-width: 1240px;
+  padding: 14px 14px 14px 20px;
+  border: 1px solid rgba(217, 194, 255, 0.35);
+  background: rgba(217, 194, 255, 0.06);
+  border-radius: 18px;
+  font-size: 14px;
+  color: var(--fg-2);
+  animation: rise 0.2s var(--ease);
+}
+.draft-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  white-space: nowrap;
+}
+.btn--sm {
+  padding: 12px 20px;
+  font-size: 15px;
+}
+.desk.is-stale .answer-zone {
+  opacity: 0.3;
+}
+
+/* точные даты в подсказке «Когда» */
+.dates {
+  display: block;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 4px;
+}
+.dates__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 4px;
+}
+.dates label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dates small {
+  font-size: 11px;
+  color: var(--dim);
+}
+.dates input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 14px;
+  outline: none;
+  color-scheme: dark;
+}
+.dates input:focus {
+  border-color: var(--time);
+}
+.dates__ok {
+  display: block;
+  width: calc(100% - 8px);
+  margin: 10px 4px 4px;
+  padding: 11px;
+  border-radius: 10px;
+  background: var(--time);
+  color: #0c0c0b;
+  font-weight: 800;
+  font-size: 14px;
+}
+.dates__ok:disabled {
+  background: var(--card-2);
+  color: var(--dim);
+}
+
 /* --- ответ --- */
 .answer-zone {
   margin-top: 40px;
@@ -2069,6 +2150,13 @@ input[type='date'] {
     background: linear-gradient(rgba(12, 12, 11, 0), var(--bg) 45%);
     z-index: -1;
     pointer-events: none;
+  }
+  .draft-bar {
+    padding: 14px;
+  }
+  .draft-bar__actions {
+    width: 100%;
+    justify-content: space-between;
   }
   .dock__right .btn {
     flex: 1;

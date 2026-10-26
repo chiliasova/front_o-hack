@@ -1,5 +1,6 @@
 // Мок-бэкенд: имитирует ответы из FRONTEND_API_SPEC.md, чтобы демо работало без сервера.
 import { formatDateDots, nightsBetween } from '../lib/format';
+import { MONTHS_GEN } from '../lib/phrase';
 import { DESTINATIONS, HOT_DEALS, PROFILES, SEED_TRIPS, type DestinationTemplate } from './mockData';
 import type {
   ActionResponse,
@@ -172,6 +173,28 @@ function weekendDates() {
   return { check_in: iso(fri), check_out: iso(sun) };
 }
 
+// «с 14 по 16 ноября», «14–16 ноября», «с 30 октября по 2 ноября» → ISO-даты (ближайшие в будущем).
+function parseDates(text: string) {
+  const mon = MONTHS_GEN.join('|');
+  const m =
+    text.match(new RegExp(`с\\s+(\\d{1,2})(?:\\s+(${mon}))?\\s+по\\s+(\\d{1,2})\\s+(${mon})`, 'i')) ??
+    text.match(new RegExp(`(\\d{1,2})\\s*[–—-]\\s*(\\d{1,2})()\\s+(${mon})`, 'i'));
+  if (!m) return null;
+  const [d1, m1raw, d2, m2raw] = m[0].startsWith('с') ? [m[1], m[2], m[3], m[4]] : [m[1], '', m[2], m[4]];
+  const m2 = MONTHS_GEN.indexOf(m2raw.toLowerCase());
+  const m1 = m1raw ? MONTHS_GEN.indexOf(m1raw.toLowerCase()) : m2;
+  const today = new Date();
+  let year = today.getFullYear();
+  const start = () => new Date(year, m1, Number(d1));
+  if (start() < new Date(today.getFullYear(), today.getMonth(), today.getDate())) year += 1;
+  const a = start();
+  const b = new Date(m2 < m1 ? year + 1 : year, m2, Number(d2));
+  if (b <= a) return null;
+  const iso = (x: Date) =>
+    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  return { check_in: iso(a), check_out: iso(b) };
+}
+
 const REPLIES: Record<string, string> = {
   sochi:
     'Я подобрал для вас отличный тур в Сочи! Пятизвёздочный отель с подогреваемым бассейном и удобным прямым рейсом.',
@@ -249,6 +272,8 @@ export async function mockChat(req: ChatRequest): Promise<ChatResponse> {
     }
   }
   if (/реб[её]н|дет/.test(text) && tpl.guests < 3) overrides.guests = 3;
+  const dates = parseDates(text);
+  if (dates) Object.assign(overrides, dates);
 
   const budget = parseBudget(text);
   let { hotel, extra } = personalize(key, tpl.hotels[tier], profile);

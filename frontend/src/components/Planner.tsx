@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { TripPlan, UserProfile } from '../api/types';
 import { formatRub } from '../lib/format';
 import { TripSentence, Notes, useThinking } from './Answer';
@@ -38,6 +38,11 @@ export function Planner(p: Props) {
   const [editing, setEditing] = useState(false);
   const [hot, setHot] = useState<number | null>(null);
   const [more, setMore] = useState('');
+  // Правки смысловых слов копятся в черновике; агент получает фразу только по кнопке.
+  const [draft, setDraft] = useState<string | null>(null);
+  useEffect(() => setDraft(null), [p.request]);
+  const shown = draft ?? p.request;
+  const dirty = draft !== null && draft !== p.request;
   const thinking = useThinking(p.loading);
   const plan = p.answer?.plan ?? null;
   const booked = plan?.status === 'booked';
@@ -80,7 +85,7 @@ export function Planner(p: Props) {
   }
 
   return (
-    <main className={`desk ${p.loading ? 'is-loading' : ''} ${plan ? 'has-plan' : ''}`}>
+    <main className={`desk ${p.loading ? 'is-loading' : ''} ${dirty ? 'is-stale' : ''} ${plan ? 'has-plan' : ''}`}>
       <section className="ask-zone">
         <div className="label-row">
           <span className="label">Ваш запрос — цветные слова можно поменять</span>
@@ -88,7 +93,9 @@ export function Planner(p: Props) {
             {(p.loading || plan) && <i className={plan && !plan.timeline_validation.is_valid && !p.loading ? 'is-warn' : ''} />}
             {p.loading
               ? `агент ${thinking}…`
-              : booked
+              : dirty
+                ? 'ждёт пересборки'
+                : booked
                 ? 'поездка оплачена'
                 : plan
                   ? plan.timeline_validation.is_valid
@@ -99,7 +106,7 @@ export function Planner(p: Props) {
         </div>
         {editing ? (
           <AskInput
-            initial={p.request}
+            initial={shown}
             placeholder="Куда, когда, с кем и на какой бюджет?"
             autoFocus
             disabled={p.loading}
@@ -111,10 +118,30 @@ export function Planner(p: Props) {
           />
         ) : (
           <>
-            <AskSentence text={p.request} refinements={p.refinements} disabled={p.loading} onChange={p.onAsk} onEdit={() => setEditing(true)} />
-            <button className="link-btn link-btn--dim" onClick={() => setEditing(true)} disabled={p.loading}>
-              <Icon name="pencil" size={14} /> переписать запрос целиком
-            </button>
+            <AskSentence
+              text={shown}
+              refinements={dirty ? [] : p.refinements}
+              disabled={p.loading}
+              onChange={setDraft}
+              onEdit={() => setEditing(true)}
+            />
+            {dirty ? (
+              <div className="draft-bar">
+                <span>Запрос изменён. Поправьте всё, что нужно, и пересоберите поездку.</span>
+                <div className="draft-bar__actions">
+                  <button className="link-btn link-btn--dim" onClick={() => setDraft(null)}>
+                    Вернуть как было
+                  </button>
+                  <button className="btn btn--light btn--sm" onClick={() => p.onAsk(draft!)}>
+                    Пересобрать поездку <Icon name="arrowRight" size={18} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="link-btn link-btn--dim" onClick={() => setEditing(true)} disabled={p.loading}>
+                <Icon name="pencil" size={14} /> переписать запрос целиком
+              </button>
+            )}
           </>
         )}
       </section>
@@ -203,7 +230,7 @@ export function Planner(p: Props) {
                 В мои поездки <Icon name="arrowRight" size={18} />
               </button>
             ) : (
-              <button className="btn btn--light" onClick={p.onCheckout} disabled={p.loading}>
+              <button className="btn btn--light" onClick={p.onCheckout} disabled={p.loading || dirty}>
                 Поехали <span className="btn__sum">{formatRub(plan.pricing.total_price)}</span>
                 <Icon name="arrowRight" size={18} />
               </button>

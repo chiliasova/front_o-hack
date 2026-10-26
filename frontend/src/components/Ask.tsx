@@ -4,6 +4,7 @@ import {
   KIND_LABEL,
   OPTIONS,
   appendToken,
+  formatRange,
   missingKinds,
   replaceSegment,
   tokenize,
@@ -107,6 +108,47 @@ export function AskInput({
 
 type Open = { seg: Segment } | { add: TokenKind } | null;
 
+const isoDay = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Точные даты заезда и выезда внутри подсказки «Когда». */
+function DateRange({ onPick }: { onPick: (text: string) => void }) {
+  const today = new Date();
+  const min = isoDay(today);
+  const [from, setFrom] = useState(isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14)));
+  const [to, setTo] = useState(isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17)));
+  const ok = from >= min && to > from;
+  return (
+    <span className="dates">
+      <span className="pop__head">Точные даты</span>
+      <span className="dates__row">
+        <label>
+          <small>заезд</small>
+          <input
+            type="date"
+            value={from}
+            min={min}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              if (e.target.value >= to) {
+                const d = new Date(`${e.target.value}T00:00:00`);
+                setTo(isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 2)));
+              }
+            }}
+          />
+        </label>
+        <label>
+          <small>выезд</small>
+          <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </label>
+      </span>
+      <button type="button" className="dates__ok" disabled={!ok} onClick={() => onPick(formatRange(from, to))}>
+        {ok ? formatRange(from, to) : 'выезд позже заезда'}
+      </button>
+    </span>
+  );
+}
+
 /** Запрос-конструктор: смысловые слова кликабельны, остальной текст правится целиком. */
 export function AskSentence({
   text,
@@ -164,6 +206,7 @@ export function AskSentence({
           </button>
         );
       })}
+      {kind === 'time' && <DateRange onPick={pick} />}
       {current && kind !== 'place' && (
         <button type="button" className="pop__row pop__row--remove" onClick={() => pick(null)}>
           <span>Убрать из запроса</span>

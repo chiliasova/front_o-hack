@@ -16,6 +16,19 @@ const R = '(?![а-яёa-z])';
 const PLACES =
   'сочи|адлер[а-яё]*|красн[а-яё]* полян[а-яё]*|питер[а-яё]*|петербург[а-яё]*|санкт[‑-]петербург[а-яё]*|спб|рим[а-яё]*|итали[а-яё]*|карели[а-яё]*|хургад[а-яё]*|египет|казан[а-яё]*|калининград[а-яё]*|алта[а-яё]*|европ[а-яё]*|турци[а-яё]*|москв[а-яё]*';
 
+// Месяцы в родительном падеже: «с 14 по 16 ноября», «14–16 ноября», «с 30 октября по 2 ноября».
+export const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const MON = `(?:${MONTHS_GEN.join('|')})`;
+const DATES = `с\\s+\\d{1,2}(?:\\s+${MON})?\\s+по\\s+\\d{1,2}\\s+${MON}|\\d{1,2}\\s*[–—-]\\s*\\d{1,2}\\s+${MON}`;
+
+/** Две даты ISO → «с 14 по 16 ноября» / «с 30 октября по 2 ноября». */
+export function formatRange(checkIn: string, checkOut: string) {
+  const a = new Date(`${checkIn}T00:00:00`);
+  const b = new Date(`${checkOut}T00:00:00`);
+  if (a.getMonth() === b.getMonth()) return `с ${a.getDate()} по ${b.getDate()} ${MONTHS_GEN[b.getMonth()]}`;
+  return `с ${a.getDate()} ${MONTHS_GEN[a.getMonth()]} по ${b.getDate()} ${MONTHS_GEN[b.getMonth()]}`;
+}
+
 const RULES: { kind: TokenKind; re: string }[] = [
   {
     kind: 'place',
@@ -23,7 +36,7 @@ const RULES: { kind: TokenKind; re: string }[] = [
   },
   {
     kind: 'time',
-    re: 'на\\s+(?:выходн[а-яё]*|майск[а-яё]*|новогодн[а-яё]*|недел[а-яё]*|\\d+\\s+(?:дн[а-яё]*|дня|ноч[а-яё]*|недел[а-яё]*))|в\\s+(?:январ|феврал|март|апрел|ма|июн|июл|август|сентябр|октябр|ноябр|декабр)е|летом|зимой|осенью|весной|завтра|сегодня',
+    re: `${DATES}|на\\s+(?:выходн[а-яё]*|майск[а-яё]*|новогодн[а-яё]*|недел[а-яё]*|\\d+\\s+(?:дн[а-яё]*|дня|ноч[а-яё]*|недел[а-яё]*))|в\\s+(?:январ|феврал|март|апрел|ма|июн|июл|август|сентябр|октябр|ноябр|декабр)е|летом|зимой|осенью|весной|завтра|сегодня`,
   },
   {
     kind: 'who',
@@ -98,12 +111,16 @@ export const OPTIONS: Record<TokenKind, { text: string; hint?: string }[]> = {
   ],
 };
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 const tidy = (s: string) =>
-  s
-    .replace(/\s+([,.!?])/g, '$1')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/,\s*,/g, ',')
-    .trim();
+  capitalize(
+    s
+      .replace(/\s+([,.!?])/g, '$1')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/,\s*,/g, ',')
+      .trim(),
+  );
 
 export function replaceSegment(text: string, seg: Segment, next: string | null) {
   return tidy(`${text.slice(0, seg.start)}${next ?? ''}${text.slice(seg.end)}`);

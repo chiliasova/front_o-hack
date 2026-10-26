@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { UserProfile } from '../api/types';
 import type { DataSource } from '../api/client';
 import { formatNum } from '../lib/format';
 import { DEMO_PROFILES, type DemoProfile } from '../lib/profiles';
+import { applyTheme, initialTheme, THEMES, type ThemeKey } from '../lib/theme';
 import { Icon } from './Icon';
 
 export type View = 'planner' | 'deals' | 'trips';
@@ -22,6 +24,11 @@ const NAV: { key: View; label: string }[] = [
 ];
 
 export function Header({ view, onView, profileKey, onProfile, profile, dataSource }: Props) {
+  const [theme, setTheme] = useState<ThemeKey>(initialTheme);
+  const pickTheme = (t: ThemeKey) => {
+    setTheme(t);
+    applyTheme(t);
+  };
   const initials = profile
     ? profile.name
         .split(' ')
@@ -54,6 +61,20 @@ export function Header({ view, onView, profileKey, onProfile, profile, dataSourc
       </nav>
 
       <div className="header__right">
+        <div className="theme-dots" role="radiogroup" aria-label="Стиль интерфейса">
+          <span className="theme-dots__label">Стиль</span>
+          {THEMES.map((t) => (
+            <button
+              key={t.key}
+              role="radio"
+              aria-checked={theme === t.key}
+              aria-label={t.label}
+              title={t.label}
+              className={`t-${t.key} ${theme === t.key ? 'is-active' : ''}`}
+              onClick={() => pickTheme(t.key)}
+            />
+          ))}
+        </div>
         {dataSource === 'mock' && (
           <span className="demo-flag" title="Бэкенд недоступен — показываем демо-ответы">
             демо

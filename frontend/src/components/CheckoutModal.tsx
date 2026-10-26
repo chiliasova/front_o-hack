@@ -90,7 +90,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
             </div>
           </div>
           <div className="pass__stub">
-            <QRCodeSVG value={voucher.qr_code_data} size={120} level="M" bgColor="transparent" fgColor="#16130f" />
+            <QRCodeSVG value={voucher.qr_code_data} size={120} level="M" bgColor="#ffffff" fgColor="#16130f" marginSize={2} />
             <span className="kicker">на ресепшене</span>
           </div>
         </div>

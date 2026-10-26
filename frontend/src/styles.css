@@ -32,6 +32,11 @@
   --r-sm: 12px;
   --header-h: 72px;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --header-bg: rgba(243, 238, 229, 0.88);
+  --summary-bg: var(--ink);
+  --summary-fg: var(--paper);
+  --summary-muted: rgba(243, 238, 229, 0.6);
+  --on-accent: #fff;
 
   font-family: var(--sans);
   font-size: 15px;
@@ -188,7 +193,7 @@ textarea {
 }
 .btn--accent {
   background: var(--coral);
-  color: #fff;
+  color: var(--on-accent);
   padding: 15px 26px;
   font-size: 15px;
 }
@@ -342,7 +347,7 @@ textarea {
   align-items: center;
   gap: 32px;
   padding: 0 28px;
-  background: rgba(243, 238, 229, 0.88);
+  background: var(--header-bg);
   backdrop-filter: blur(10px) saturate(1.2);
   border-bottom: 1px solid var(--line);
 }
@@ -787,7 +792,7 @@ textarea {
   border-radius: 50%;
   border: 0;
   background: var(--coral);
-  color: #fff;
+  color: var(--on-accent);
   display: grid;
   place-items: center;
   flex: none;
@@ -1348,8 +1353,8 @@ textarea {
 
 /* Итог */
 .summary {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--summary-bg);
+  color: var(--summary-fg);
   padding: 18px 40px;
   display: flex;
   justify-content: space-between;
@@ -1362,12 +1367,12 @@ textarea {
   flex-wrap: wrap;
   gap: 4px 18px;
   font-size: 13px;
-  color: rgba(243, 238, 229, 0.6);
+  color: var(--summary-muted);
 }
 .summary__breakdown b {
   font-family: var(--mono);
   font-weight: 500;
-  color: rgba(243, 238, 229, 0.9);
+  color: var(--summary-fg);
 }
 .summary__total {
   display: flex;
@@ -1380,7 +1385,7 @@ textarea {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgba(243, 238, 229, 0.6);
+  color: var(--summary-muted);
 }
 .summary__sum {
   font-family: var(--serif);
@@ -1470,7 +1475,7 @@ textarea {
   height: 84px;
   border-radius: 50%;
   background: var(--coral);
-  color: #fff;
+  color: var(--on-accent);
   display: flex;
   flex-direction: column;
   align-items: center;

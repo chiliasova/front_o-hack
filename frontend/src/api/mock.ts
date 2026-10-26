@@ -337,9 +337,7 @@ export async function mockBook(tripId: string, req: BookRequest, userId: string 
   const plan = store.plans[tripId];
   if (!plan) throw new Error('План поездки не найден — попросите агента собрать его заново');
 
-  const afterPoints = plan.pricing.total_price - req.use_loyalty_points;
-  const promo = req.promo_code.trim().toUpperCase() === 'OSTROVOK' ? Math.round(afterPoints * 0.05) : 0;
-  const total_paid = Math.max(0, afterPoints - promo);
+  const total_paid = Math.max(0, plan.pricing.total_price - req.use_loyalty_points);
   const profile = getProfile(userId);
   const points_earned = Math.round((total_paid * (profile?.cashback_percent ?? 5)) / 100 / 2);
   const code = `OST-${String(Math.floor(100000 + Math.random() * 900000))}`;

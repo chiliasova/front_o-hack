@@ -13,18 +13,12 @@ interface Props {
   onOpenTrips: () => void;
 }
 
-// Превью скидки по промокоду. Финальную сумму всё равно присылает бэкенд в ваучере.
-const PROMO_PERCENT: Record<string, number> = { OSTROVOK: 5 };
-
 export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }: Props) {
   const { pricing } = plan;
   const nights = nightsBetween(plan.check_in, plan.check_out);
   const availablePoints = Math.min(profile?.loyalty_points ?? 0, pricing.total_price);
 
   const [usePoints, setUsePoints] = useState(availablePoints > 0);
-  const [promoInput, setPromoInput] = useState('');
-  const [promo, setPromo] = useState<{ code: string; percent: number } | null>(null);
-  const [promoError, setPromoError] = useState('');
   const [name, setName] = useState(profile?.name ?? '');
   const [phone, setPhone] = useState(profile ? '+7 999 123-45-67' : '');
   const [email, setEmail] = useState(profile?.email ?? '');
@@ -34,22 +28,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
   const [voucher, setVoucher] = useState<Voucher | null>(null);
 
   const points = usePoints ? availablePoints : 0;
-  const afterPoints = pricing.total_price - points;
-  const promoDiscount = promo ? Math.round((afterPoints * promo.percent) / 100) : 0;
-  const total = Math.max(0, afterPoints - promoDiscount);
-
-  const applyPromo = () => {
-    const code = promoInput.trim().toUpperCase();
-    if (!code) return;
-    const percent = PROMO_PERCENT[code];
-    if (percent) {
-      setPromo({ code, percent });
-      setPromoError('');
-    } else {
-      setPromo(null);
-      setPromoError('Такой промокод не найден');
-    }
-  };
+  const total = Math.max(0, pricing.total_price - points);
 
   const pay = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,7 +43,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
         plan.id,
         {
           use_loyalty_points: points,
-          promo_code: promo?.code ?? '',
+          promo_code: '', // поле есть в спеке, промокоды не используем
           guest_name: name.trim(),
           guest_phone: phone.trim(),
           guest_email: email.trim(),
@@ -153,12 +132,6 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
               <span>−{formatRub(points)}</span>
             </div>
           )}
-          {promo && (
-            <div className="estimate__row text-success">
-              <span>🏷️ Промокод {promo.code} (−{promo.percent}%)</span>
-              <span>−{formatRub(promoDiscount)}</span>
-            </div>
-          )}
         </div>
 
         {availablePoints > 0 ? (
@@ -173,24 +146,6 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
           <div className="hint">🌙 Войдите в профиль, чтобы копить и списывать баллы «Банка снов»</div>
         )}
 
-        <div className="promo">
-          <input
-            value={promoInput}
-            onChange={(e) => setPromoInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                applyPromo();
-              }
-            }}
-            placeholder="Промокод, например OSTROVOK"
-            aria-label="Промокод"
-          />
-          <button type="button" className="btn btn--ghost" onClick={applyPromo}>
-            Применить
-          </button>
-        </div>
-        {promoError && <div className="field-error">{promoError}</div>}
 
         <div className="fields">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя и фамилия" aria-label="Имя" />

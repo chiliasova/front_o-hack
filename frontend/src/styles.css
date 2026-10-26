@@ -1207,17 +1207,6 @@ textarea {
 .toggle input:checked + .toggle__track::after {
   transform: translateX(18px);
 }
-.promo {
-  display: flex;
-  gap: 8px;
-}
-.promo input {
-  flex: 1;
-  text-transform: uppercase;
-}
-.promo input::placeholder {
-  text-transform: none;
-}
 .fields {
   display: grid;
   grid-template-columns: 1fr 1fr;

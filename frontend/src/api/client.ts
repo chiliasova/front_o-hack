@@ -2,9 +2,12 @@
 //  auto — ходим в бэкенд, если он недоступен (сеть/404/5xx) — отвечают моки; по умолчанию;
 //  live — только бэкенд;
 //  mock — только моки (удобно для демо без сервера).
+import { ApiError } from './errors';
 import * as mock from './mock';
 import type {
   ActionResponse,
+  AuthResponse,
+  AuthUser,
   BookRequest,
   BookResponse,
   BookedTrip,
@@ -13,8 +16,12 @@ import type {
   HotDeal,
   InquiryRequest,
   InquiryResponse,
+  LoginRequest,
+  ProfileUpdate,
+  RegisterRequest,
   UserProfile,
 } from './types';
+import { getToken } from '../lib/auth';
 
 const MODE = import.meta.env.VITE_API_MODE ?? 'auto';
 const BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
@@ -35,20 +42,15 @@ export const onDataSourceChange = (fn: (s: DataSource) => void) => {
   };
 };
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status?: number,
-  ) {
-    super(message);
-  }
-}
+export { ApiError };
 
 class FallbackSignal extends Error {}
 
 async function http<T>(path: string, init: RequestInit = {}, userId?: string | null): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (userId) headers['X-User-ID'] = userId;
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers, ...(init.headers as object) } });
@@ -91,6 +93,29 @@ async function call<T>(live: () => Promise<T>, fallback: () => Promise<T>): Prom
 const json = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 
 export const api = {
+  auth: {
+    login: (req: LoginRequest) =>
+      call(
+        () => http<AuthResponse>('/api/auth/login', json(req)),
+        () => mock.mockLogin(req),
+      ),
+    register: (req: RegisterRequest) =>
+      call(
+        () => http<AuthResponse>('/api/auth/register', json(req)),
+        () => mock.mockRegister(req),
+      ),
+    me: () =>
+      call(
+        () => http<AuthUser>('/api/auth/me'),
+        () => mock.mockMe(getToken()),
+      ),
+    updateProfile: (upd: ProfileUpdate) =>
+      call(
+        () => http<AuthUser>('/api/auth/profile', { method: 'PUT', body: JSON.stringify(upd) }),
+        () => mock.mockUpdateProfile(getToken(), upd),
+      ),
+  },
+
   health: () =>
     call(
       () => http<{ status: string }>('/health'),

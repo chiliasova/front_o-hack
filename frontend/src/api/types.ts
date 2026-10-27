@@ -93,6 +93,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   loyalty_tier: string;
   loyalty_points: number;
   cashback_percent: number;
@@ -163,4 +164,48 @@ export interface BookedTrip {
   total_paid: number;
   status: 'upcoming' | 'completed' | 'cancelled';
   extras: string[];
+}
+
+// ---------- Авторизация (FRONTEND_AUTH_CABINET_HISTORY_SPEC.md) ----------
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  status?: string | null;
+  dream_bank_balance: number;
+  has_schengen: boolean;
+  has_pets: boolean;
+  pet_details?: string | null;
+  preferred_amenities: string[];
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  cart_transferred?: boolean;
+  welcome_bonus_applied?: number;
+  active_trip_id?: string | null;
+  user: AuthUser;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+  session_id?: string;
+}
+
+export interface RegisterRequest extends LoginRequest {
+  name: string;
+  phone?: string;
+}
+
+export interface ProfileUpdate {
+  name?: string;
+  phone?: string;
+  has_pets: boolean;
+  pet_details?: string;
+  has_schengen: boolean;
+  preferred_amenities: string[];
 }

@@ -1,9 +1,15 @@
 // Мок-бэкенд: имитирует ответы из FRONTEND_API_SPEC.md, чтобы демо работало без сервера.
 import { formatDateDots, nightsBetween } from '../lib/format';
 import { MONTHS_GEN } from '../lib/phrase';
-import { DESTINATIONS, HOT_DEALS, PROFILES, SEED_TRIPS, type DestinationTemplate } from './mockData';
+import { ApiError } from './errors';
+import { DEMO_PASSWORD, DESTINATIONS, HOT_DEALS, PROFILES, SEED_TRIPS, type DestinationTemplate } from './mockData';
 import type {
   ActionResponse,
+  AuthResponse,
+  AuthUser,
+  LoginRequest,
+  ProfileUpdate,
+  RegisterRequest,
   BookRequest,
   BookResponse,
   BookedTrip,
@@ -22,21 +28,25 @@ const wait = (min: number, max: number) =>
 
 // ---------- Хранилище (localStorage, чтобы бронирования переживали перезагрузку) ----------
 
-const STORE_KEY = 'odin-mock-store-v1';
+const STORE_KEY = 'odin-mock-store-v2';
 interface Store {
   trips: Record<string, BookedTrip[]>;
   points: Record<string, number>;
   plans: Record<string, TripPlan>;
+  /** Зарегистрированные в демо пользователи и их пароли. */
+  users: Record<string, { profile: UserProfile; password: string }>;
+  /** Предпочтения, изменённые в личном кабинете. */
+  prefs: Record<string, Partial<UserProfile>>;
 }
 
 function loadStore(): Store {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return JSON.parse(raw) as Store;
+    if (raw) return { users: {}, prefs: {}, ...(JSON.parse(raw) as Partial<Store>) } as Store;
   } catch {
     /* приватный режим и т.п. */
   }
-  return { trips: structuredClone(SEED_TRIPS), points: {}, plans: {} };
+  return { trips: structuredClone(SEED_TRIPS), points: {}, plans: {}, users: {}, prefs: {} };
 }
 
 const store = loadStore();
@@ -60,9 +70,9 @@ const userKey = (userId: string | null) => userId ?? 'guest';
 
 function getProfile(userId: string | null): UserProfile | null {
   if (!userId) return null;
-  const base = PROFILES[userId];
+  const base = PROFILES[userId] ?? store.users[userId]?.profile;
   if (!base) return null;
-  return { ...base, loyalty_points: store.points[userId] ?? base.loyalty_points };
+  return { ...base, ...store.prefs[userId], loyalty_points: store.points[userId] ?? base.loyalty_points };
 }
 
 // ---------- Сборка плана ----------
@@ -359,6 +369,7 @@ export async function mockProfile(userId: string): Promise<UserProfile> {
 
 export async function mockBook(tripId: string, req: BookRequest, userId: string | null): Promise<BookResponse> {
   await wait(1200, 1800);
+  if (!userId) throw new ApiError('Для оформления путешествия необходимо авторизоваться или зарегистрироваться', 401);
   const plan = store.plans[tripId];
   if (!plan) throw new Error('План поездки не найден — попросите агента собрать его заново');
 
@@ -489,4 +500,100 @@ export async function mockInquire(_hotelId: number, req: InquiryRequest): Promis
     answer = 'Спасибо за вопрос! Передали его менеджеру отеля, а пока: ресепшн работает круглосуточно, все детали уточним до заезда.';
   }
   return { status: 'answered', answer: `Отельер ответил: ${answer}` };
+}
+
+// ---------- Авторизация ----------
+
+const TOKEN_PREFIX = 'mock-token.';
+
+function toAuthUser(p: UserProfile): AuthUser {
+  return {
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    phone: p.phone ?? null,
+    status: p.loyalty_tier,
+    dream_bank_balance: p.loyalty_points,
+    has_schengen: p.preferences.has_schengen_visa,
+    has_pets: p.preferences.has_pets,
+    pet_details: p.preferences.pet_details ?? null,
+    preferred_amenities: p.preferences.favorite_amenities,
+  };
+}
+
+function findByEmail(email: string) {
+  const e = email.trim().toLowerCase();
+  const demo = Object.values(PROFILES).find((p) => p.email === e);
+  if (demo) return { profile: demo, password: DEMO_PASSWORD };
+  return Object.values(store.users).find((u) => u.profile.email === e) ?? null;
+}
+
+function authResponse(userId: string, sessionId?: string, bonus = 0): AuthResponse {
+  const plan = sessionId ? sessions.get(sessionId)?.plan : null;
+  return {
+    access_token: `${TOKEN_PREFIX}${userId}`,
+    token_type: 'bearer',
+    cart_transferred: !!plan,
+    welcome_bonus_applied: bonus,
+    active_trip_id: plan?.id ?? null,
+    user: toAuthUser(getProfile(userId)!),
+  };
+}
+
+function userFromToken(token: string | null) {
+  const id = token?.startsWith(TOKEN_PREFIX) ? token.slice(TOKEN_PREFIX.length) : null;
+  const p = getProfile(id);
+  if (!p) throw new ApiError('Сессия истекла, войдите заново', 401);
+  return p;
+}
+
+export async function mockLogin(req: LoginRequest): Promise<AuthResponse> {
+  await wait(400, 700);
+  const found = findByEmail(req.email);
+  if (!found || found.password !== req.password) throw new ApiError('Неверный email или пароль', 401);
+  return authResponse(found.profile.id, req.session_id);
+}
+
+export async function mockRegister(req: RegisterRequest): Promise<AuthResponse> {
+  await wait(500, 800);
+  if (findByEmail(req.email)) throw new ApiError('Пользователь с таким email уже зарегистрирован', 409);
+  const id = planId();
+  store.users[id] = {
+    password: req.password,
+    profile: {
+      id,
+      name: req.name.trim(),
+      email: req.email.trim().toLowerCase(),
+      phone: req.phone?.trim() || undefined,
+      loyalty_tier: 'Standard',
+      loyalty_points: 1000,
+      cashback_percent: 3,
+      preferences: { family: '', has_pets: false, favorite_amenities: [], has_schengen_visa: false },
+    },
+  };
+  persist();
+  return authResponse(id, req.session_id, 1000);
+}
+
+export async function mockMe(token: string | null): Promise<AuthUser> {
+  await wait(150, 300);
+  return toAuthUser(userFromToken(token));
+}
+
+export async function mockUpdateProfile(token: string | null, upd: ProfileUpdate): Promise<AuthUser> {
+  await wait(400, 700);
+  const p = userFromToken(token);
+  store.prefs[p.id] = {
+    ...(upd.name ? { name: upd.name } : {}),
+    ...(upd.phone !== undefined ? { phone: upd.phone } : {}),
+    preferences: {
+      ...p.preferences,
+      has_pets: upd.has_pets,
+      pet_details: upd.has_pets ? upd.pet_details || undefined : undefined,
+      has_schengen_visa: upd.has_schengen,
+      favorite_amenities: upd.preferred_amenities,
+    },
+  };
+  persist();
+  return toAuthUser(getProfile(p.id)!);
 }

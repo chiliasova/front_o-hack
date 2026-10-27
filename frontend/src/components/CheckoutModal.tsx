@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useState, type FormEvent } from 'react';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { PaymentMethod, TripPlan, UserProfile, Voucher } from '../api/types';
 import { formatDateShort, formatNum, formatRub, nightsBetween, pluralize } from '../lib/format';
 import { Icon } from './Icon';
@@ -12,9 +12,11 @@ interface Props {
   onClose: () => void;
   onBooked: (voucher: Voucher) => void;
   onOpenTrips: () => void;
+  /** Оплата доступна только после входа: бэкенд отвечает 401 гостю. */
+  onNeedAuth: () => void;
 }
 
-export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }: Props) {
+export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips, onNeedAuth }: Props) {
   const { pricing } = plan;
   const nights = nightsBetween(plan.check_in, plan.check_out);
   const availablePoints = Math.min(profile?.loyalty_points ?? 0, pricing.total_price);
@@ -33,6 +35,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
 
   const pay = async (e: FormEvent) => {
     e.preventDefault();
+    if (!profile) return onNeedAuth();
     if (!name.trim() || !phone.trim() || !/\S+@\S+\.\S+/.test(email)) {
       setError('Заполните имя, телефон и корректный email');
       return;
@@ -55,6 +58,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
       setVoucher(res.voucher);
       onBooked(res.voucher);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return onNeedAuth();
       setError(err instanceof Error ? err.message : 'Не удалось провести оплату');
     } finally {
       setPaying(false);
@@ -193,6 +197,11 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
 
         {error && <div className="field-error">{error}</div>}
 
+        {!profile ? (
+          <button type="button" className="btn btn--ink btn--block" onClick={onNeedAuth}>
+            <Icon name="user" size={18} /> Войдите, чтобы оплатить
+          </button>
+        ) : (
         <button className="btn btn--ink btn--block" disabled={paying}>
           {paying ? (
             <>
@@ -205,6 +214,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips }:
             </>
           )}
         </button>
+        )}
       </form>
     </Modal>
   );

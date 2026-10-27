@@ -1,22 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, getDataSource, onDataSourceChange, type DataSource } from './api/client';
-import type { HotDeal, UserProfile } from './api/types';
+import type { AuthResponse, HotDeal, UserProfile } from './api/types';
+import { AuthModal } from './components/AuthModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { Header, type View } from './components/Header';
 import { HotDeals } from './components/HotDeals';
+import { HistorySidebar } from './components/HistorySidebar';
 import { InquiryModal } from './components/InquiryModal';
 import { MyTrips } from './components/MyTrips';
 import { Planner, type Answer } from './components/Planner';
+import { ProfileModal } from './components/ProfileModal';
 import { TripDetails } from './components/TripDetails';
 import { Toast } from './components/ui';
 import { uuid } from './lib/format';
-import { DEMO_PROFILES, STARTER_CHIPS, type DemoProfile } from './lib/profiles';
+import { clearSession, getToken, saveSession, toProfile } from './lib/auth';
+import { clearHistory, loadHistory, upsertHistory, type HistoryItem } from './lib/history';
+import { accountKey, STARTER_CHIPS } from './lib/profiles';
 
 const DEFAULT_HINTS = ['Найди дешевле', 'Что взять с собой?'];
 
 export default function App() {
   const [view, setView] = useState<View>('planner');
-  const [profileKey, setProfileKey] = useState<DemoProfile['key']>('alexey');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [dataSource, setDataSource] = useState<DataSource>(getDataSource());
 
@@ -40,25 +44,34 @@ export default function App() {
   const [inquiry, setInquiry] = useState<{ hotelId: number; hotelName: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [tripsRefresh, setTripsRefresh] = useState(0);
+  const [auth, setAuth] = useState<{ reason?: string; thenCheckout?: boolean } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
 
-  const demo = DEMO_PROFILES.find((p) => p.key === profileKey)!;
   const plan = answer?.plan ?? null;
+  const userId = profile?.id ?? null;
+
+  // Для записи в историю после ответа агента нужны актуальные запрос и уточнения.
+  const dialogRef = useRef({ request, refinements });
+  dialogRef.current = { request, refinements };
 
   useEffect(() => onDataSourceChange(setDataSource), []);
   useEffect(() => {
     api.health().catch(() => undefined);
   }, []);
 
+  // Профиль берём по сохранённому токену; если токен протух — выходим молча.
   const loadProfile = useCallback(() => {
-    if (!demo.userId) {
-      setProfile(null);
-      return;
-    }
-    api
-      .profile(demo.userId)
-      .then(setProfile)
-      .catch(() => setProfile(null));
-  }, [demo.userId]);
+    if (!getToken()) return;
+    api.auth
+      .me()
+      .then((u) => setProfile(toProfile(u)))
+      .catch(() => {
+        clearSession();
+        setProfile(null);
+      });
+  }, []);
 
   useEffect(loadProfile, [loadProfile]);
 
@@ -71,19 +84,67 @@ export default function App() {
     setError(null);
   };
 
-  // Смена профиля — новая сессия, чтобы жюри видело персонализацию с нуля.
-  const switchProfile = (key: DemoProfile['key']) => {
-    setProfileKey(key);
-    const next = uuid();
+  const switchSession = (next: string) => {
     sessionRef.current = next;
     setSessionId(next);
     setLoading(false);
+  };
+
+  const newRequest = () => {
+    if (loading) return;
+    switchSession(uuid());
     resetDialog();
+    setHistoryOpen(false);
+    setView('planner');
+  };
+
+  // Вход не сбрасывает диалог: бэкенд переносит гостевую корзину по session_id.
+  const onAuthed = (res: AuthResponse) => {
+    saveSession(res.access_token, res.user.id);
+    setProfile(toProfile(res.user));
+    const thenCheckout = auth?.thenCheckout;
+    setAuth(null);
+    const first = res.user.name.split(' ')[0];
+    if (res.welcome_bonus_applied) setToast(`${first}, добро пожаловать! Начислили приветственные баллы`);
+    else if (res.cart_transferred) setToast(`Здравствуйте, ${first}! Поездка сохранилась в вашем профиле`);
+    else setToast(`Здравствуйте, ${first}!`);
+    if (thenCheckout && plan) setCheckoutOpen(true);
+  };
+
+  const logout = () => {
+    clearSession();
+    setProfile(null);
+    setProfileOpen(false);
     setCheckoutOpen(false);
     setDetailsOpen(false);
+    switchSession(uuid());
+    resetDialog();
     setView('planner');
-    const p = DEMO_PROFILES.find((x) => x.key === key)!;
-    setToast(`Вы вошли как: ${p.label}`);
+    setToast('Вы вышли из профиля');
+  };
+
+  const remember = (sid: string, next: Answer) =>
+    setHistory(
+      upsertHistory({
+        sessionId: sid,
+        requestText: dialogRef.current.request,
+        refinements: dialogRef.current.refinements,
+        answer: { reply: next.reply, plan: next.plan },
+      }),
+    );
+
+  const pickHistory = (item: HistoryItem) => {
+    if (loading) return;
+    switchSession(item.sessionId);
+    const restored: Answer = { id: uuid(), reply: item.answer.reply, plan: item.answer.plan };
+    setRequest(item.requestText);
+    setRefinements(item.refinements);
+    setAnswer(restored);
+    setVariants(restored.plan ? [restored] : []);
+    setSuggestions(null);
+    setError(null);
+    setHistoryOpen(false);
+    setView('planner');
   };
 
   const talk = useCallback(
@@ -93,11 +154,13 @@ export default function App() {
       setLastSent(text);
       setLoading(true);
       try {
-        const res = await api.chat({ message: text, session_id: sessionId, user_id: demo.userId });
+        const res = await api.chat({ message: text, session_id: sessionId, user_id: userId });
         if (sessionRef.current !== sessionId) return;
-        if (res.session_id && res.session_id !== sessionId) setSessionId(res.session_id);
+        const sid = res.session_id || sessionId;
+        if (sid !== sessionId) switchSession(sid);
         const next: Answer = { id: uuid(), reply: res.reply, plan: res.trip_plan };
         setAnswer(next);
+        remember(sid, next);
         if (next.plan) setVariants((v) => [...v, next].slice(-5));
         setSuggestions(res.suggestions ?? null);
       } catch (e) {
@@ -107,19 +170,21 @@ export default function App() {
         if (sessionRef.current === sessionId) setLoading(false);
       }
     },
-    [sessionId, demo.userId],
+    [sessionId, userId],
   );
 
   const ask = (text: string) => {
     // Новая фраза — новые варианты: старые относились к другому запросу.
     setRequest(text);
     setRefinements([]);
+    dialogRef.current = { request: text, refinements: [] };
     setVariants([]);
     talk(text);
   };
 
   const refine = (text: string) => {
     setRefinements((r) => [...r, text]);
+    dialogRef.current = { ...dialogRef.current, refinements: [...dialogRef.current.refinements, text] };
     talk(text);
   };
 
@@ -133,6 +198,7 @@ export default function App() {
       profile.preferences.has_pets && profile.preferences.pet_details,
       profile.preferences.has_schengen_visa && 'есть шенген',
     ].filter(Boolean);
+    if (!notes.length) return `${first}, куда на этот раз? Расскажите одной фразой`;
     return `${first}, помню: ${notes.join(', ').toLowerCase()}. Куда на этот раз?`;
   }, [profile]);
 
@@ -141,6 +207,7 @@ export default function App() {
     const booked: Answer = { ...answer, plan: { ...answer.plan, status: 'booked' } };
     setAnswer(booked);
     setVariants((v) => v.map((x) => (x.id === booked.id ? booked : x)));
+    remember(sessionId, booked);
   };
 
   return (
@@ -148,13 +215,10 @@ export default function App() {
       <Header
         view={view}
         onView={setView}
-        onNew={() => {
-          if (loading) return;
-          resetDialog();
-          setView('planner');
-        }}
-        profileKey={profileKey}
-        onProfile={switchProfile}
+        onNew={newRequest}
+        onHistory={() => setHistoryOpen(true)}
+        onLogin={() => setAuth({})}
+        onProfile={() => setProfileOpen(true)}
         profile={profile}
         dataSource={dataSource}
         hasRequest={!!request}
@@ -164,7 +228,7 @@ export default function App() {
         <Planner
           profile={profile}
           greeting={greeting}
-          examples={STARTER_CHIPS[profileKey]}
+          examples={STARTER_CHIPS[accountKey(profile)]}
           request={request}
           refinements={refinements}
           loading={loading}
@@ -223,6 +287,39 @@ export default function App() {
             setCheckoutOpen(false);
             setView('trips');
           }}
+          onNeedAuth={() => {
+            setCheckoutOpen(false);
+            setAuth({ reason: 'Чтобы оплатить поездку', thenCheckout: true });
+          }}
+        />
+      )}
+
+      {auth && <AuthModal sessionId={sessionId} reason={auth.reason} onClose={() => setAuth(null)} onAuthed={onAuthed} />}
+
+      {profileOpen && profile && (
+        <ProfileModal
+          profile={profile}
+          onClose={() => setProfileOpen(false)}
+          onSaved={setProfile}
+          onOpenTrips={() => {
+            setProfileOpen(false);
+            setView('trips');
+          }}
+          onLogout={logout}
+        />
+      )}
+
+      {historyOpen && (
+        <HistorySidebar
+          items={history}
+          activeSessionId={sessionId}
+          onPick={pickHistory}
+          onNew={newRequest}
+          onClear={() => {
+            clearHistory();
+            setHistory([]);
+          }}
+          onClose={() => setHistoryOpen(false)}
         />
       )}
 

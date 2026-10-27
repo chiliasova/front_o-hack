@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { api } from '../api/client';
 import type { UserProfile } from '../api/types';
 import { Icon } from './Icon';
+import { Markdown } from './Markdown';
 import { Modal, Spinner } from './ui';
 
 const CATEGORIES = [
@@ -77,7 +78,7 @@ export function InquiryModal({ hotelId, hotelName, profile, onClose }: Props) {
               <div className="qa__q">{h.q}</div>
               <div className="qa__a">
                 <span className="kicker">Отель</span>
-                {h.a.replace(/^Отельер ответил:\s*/, '')}
+                <Markdown text={h.a.replace(/^Отельер ответил:\s*/, '')} />
               </div>
             </div>
           ))}

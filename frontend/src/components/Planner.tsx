@@ -4,6 +4,7 @@ import { formatRub } from '../lib/format';
 import { TripSentence, Notes, useThinking } from './Answer';
 import { AskInput, AskSentence, Painted } from './Ask';
 import { Icon } from './Icon';
+import { Markdown } from './Markdown';
 
 export interface Answer {
   id: string;
@@ -33,6 +34,9 @@ interface Props {
 }
 
 const LETTERS = 'АБВГДЕЖ';
+
+// Длинный структурированный ответ (списки, несколько абзацев) набираем мельче, чем короткую фразу.
+const isLong = (text: string) => text.length > 280 || /\n\s*([-*•]|\d+[.)])\s/.test(text);
 
 export function Planner(p: Props) {
   const [editing, setEditing] = useState(false);
@@ -165,11 +169,11 @@ export function Planner(p: Props) {
             </p>
           ) : (
             <>
-              {plan && p.answer.reply && <p className="lead">{p.answer.reply}</p>}
+              {plan && p.answer.reply && <Markdown text={p.answer.reply} className="lead" />}
               {plan ? (
                 <TripSentence plan={plan} profile={p.profile} onDetails={p.onDetails} onHover={setHot} />
               ) : (
-                <p className="sentence">{p.answer.reply}</p>
+                <Markdown text={p.answer.reply} className={`sentence ${isLong(p.answer.reply) ? 'sentence--long' : ''}`} />
               )}
             </>
           )}

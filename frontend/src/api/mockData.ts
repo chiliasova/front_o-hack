@@ -23,7 +23,8 @@ export const PROFILES: Record<string, UserProfile> = {
   '7b1c4e90-1234-5678-9abc-def012345678': {
     id: '7b1c4e90-1234-5678-9abc-def012345678',
     name: 'Алексей Смирнов',
-    email: 'alex@example.com',
+    email: 'alexey.smirnov@example.com',
+    phone: '+7 (999) 000-00-01',
     loyalty_tier: 'Gold',
     loyalty_points: 4500,
     cashback_percent: 7.0,
@@ -37,8 +38,9 @@ export const PROFILES: Record<string, UserProfile> = {
   },
   'a3f2c9d1-5678-4abc-9def-0123456789ab': {
     id: 'a3f2c9d1-5678-4abc-9def-0123456789ab',
-    name: 'Елена Воронцова',
-    email: 'elena@example.com',
+    name: 'Елена Васильева',
+    email: 'elena.vasilyeva@example.com',
+    phone: '+7 (999) 000-00-02',
     loyalty_tier: 'Platinum',
     loyalty_points: 18200,
     cashback_percent: 10.0,
@@ -49,7 +51,25 @@ export const PROFILES: Record<string, UserProfile> = {
       has_schengen_visa: true,
     },
   },
+  'd4e5f6a7-9012-4cde-8f01-23456789abcd': {
+    id: 'd4e5f6a7-9012-4cde-8f01-23456789abcd',
+    name: 'Дмитрий Петров',
+    email: 'dmitry.petrov@example.com',
+    phone: '+7 (999) 000-00-03',
+    loyalty_tier: 'Silver',
+    loyalty_points: 1200,
+    cashback_percent: 5.0,
+    preferences: {
+      family: '1 взрослый, путешествует один',
+      has_pets: false,
+      favorite_amenities: ['wifi', 'city_center'],
+      has_schengen_visa: false,
+    },
+  },
 };
+
+
+export { DEMO_PASSWORD } from '../lib/profiles';
 
 export interface DestinationTemplate {
   destination: string;

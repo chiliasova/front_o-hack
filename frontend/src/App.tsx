@@ -148,38 +148,40 @@ export default function App() {
   };
 
   const talk = useCallback(
-    async (text: string) => {
+    async (text: string, sid0: string = sessionId) => {
       setView('planner');
       setError(null);
       setLastSent(text);
       setLoading(true);
       try {
-        const res = await api.chat({ message: text, session_id: sessionId, user_id: userId });
-        if (sessionRef.current !== sessionId) return;
-        const sid = res.session_id || sessionId;
-        if (sid !== sessionId) switchSession(sid);
+        const res = await api.chat({ message: text, session_id: sid0, user_id: userId });
+        if (sessionRef.current !== sid0) return;
+        const sid = res.session_id || sid0;
+        if (sid !== sid0) switchSession(sid);
         const next: Answer = { id: uuid(), reply: res.reply, plan: res.trip_plan };
         setAnswer(next);
         remember(sid, next);
         if (next.plan) setVariants((v) => [...v, next].slice(-5));
         setSuggestions(res.suggestions ?? null);
       } catch (e) {
-        if (sessionRef.current !== sessionId) return;
+        if (sessionRef.current !== sid0) return;
         setError(e instanceof Error ? e.message : 'Агент не ответил. Попробуйте ещё раз.');
       } finally {
-        if (sessionRef.current === sessionId) setLoading(false);
+        if (sessionRef.current === sid0) setLoading(false);
       }
     },
     [sessionId, userId],
   );
 
   const ask = (text: string) => {
-    // Новая фраза — новые варианты: старые относились к другому запросу.
+    // Новая фраза — новая сессия и новые варианты: старые слоты агента относились к другому запросу.
+    const next = uuid();
+    switchSession(next);
     setRequest(text);
     setRefinements([]);
     dialogRef.current = { request: text, refinements: [] };
     setVariants([]);
-    talk(text);
+    talk(text, next);
   };
 
   const refine = (text: string) => {

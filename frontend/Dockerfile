@@ -10,7 +10,7 @@ ENV VITE_API_MODE=$VITE_API_MODE
 RUN npm run build
 
 # ---- serve ----
-FROM nginx:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 # Адрес бэкенда внутри docker compose; можно переопределить переменной окружения
 ENV BACKEND_URL=http://backend:8000
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template

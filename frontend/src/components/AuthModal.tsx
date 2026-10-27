@@ -39,9 +39,10 @@ export function AuthModal({ sessionId, reason, onClose, onAuthed }: Props) {
     if (!/\S+@\S+\.\S+/.test(email)) return setError('Введите корректный email');
     if (tab === 'register') {
       if (!name.trim()) return setError('Как вас зовут?');
+      if (phone.replace(/\D/g, '').length < 6) return setError('Укажите телефон');
       if (password.length < 6) return setError('Пароль — минимум 6 символов');
       run('form', () =>
-        api.auth.register({ name: name.trim(), email: email.trim(), phone: phone.trim() || undefined, password, session_id: sessionId }),
+        api.auth.register({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, session_id: sessionId }),
       );
     } else {
       if (!password) return setError('Введите пароль');
@@ -88,7 +89,7 @@ export function AuthModal({ sessionId, reason, onClose, onAuthed }: Props) {
           </label>
           {tab === 'register' && (
             <label>
-              <span>Телефон — по желанию</span>
+              <span>Телефон</span>
               <input value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
             </label>
           )}

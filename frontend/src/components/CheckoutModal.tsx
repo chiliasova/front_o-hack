@@ -23,7 +23,7 @@ export function CheckoutModal({ plan, profile, onClose, onBooked, onOpenTrips, o
 
   const [usePoints, setUsePoints] = useState(availablePoints > 0);
   const [name, setName] = useState(profile?.name ?? '');
-  const [phone, setPhone] = useState(profile ? '+7 999 123-45-67' : '');
+  const [phone, setPhone] = useState(profile?.phone ?? '');
   const [email, setEmail] = useState(profile?.email ?? '');
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [paying, setPaying] = useState(false);

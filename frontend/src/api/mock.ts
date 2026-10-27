@@ -556,7 +556,7 @@ export async function mockLogin(req: LoginRequest): Promise<AuthResponse> {
 
 export async function mockRegister(req: RegisterRequest): Promise<AuthResponse> {
   await wait(500, 800);
-  if (findByEmail(req.email)) throw new ApiError('Пользователь с таким email уже зарегистрирован', 409);
+  if (findByEmail(req.email)) throw new ApiError('Пользователь с таким email или номером телефона уже зарегистрирован', 400);
   const id = planId();
   store.users[id] = {
     password: req.password,
@@ -565,9 +565,9 @@ export async function mockRegister(req: RegisterRequest): Promise<AuthResponse> 
       name: req.name.trim(),
       email: req.email.trim().toLowerCase(),
       phone: req.phone?.trim() || undefined,
-      loyalty_tier: 'Standard',
+      loyalty_tier: 'Silver', // как на бэкенде: новый пользователь получает Silver и 1 000 баллов
       loyalty_points: 1000,
-      cashback_percent: 3,
+      cashback_percent: 5,
       preferences: { family: '', has_pets: false, favorite_amenities: [], has_schengen_visa: false },
     },
   };

@@ -49,7 +49,9 @@ export function ProfileModal({ profile, onClose, onSaved, onOpenTrips, onLogout 
       });
       // Ответ PUT в спецификации не описан — берём свежий профиль из /api/auth/me.
       const fresh = toProfile(await api.auth.me());
-      onSaved({ ...fresh, preferences: { ...fresh.preferences, family: pref.family } });
+      // Бэкенд не хранит описание питомца — оставляем введённое, чтобы агент видел его в этой сессии.
+      const pet_details = fresh.preferences.pet_details ?? (hasPets ? petDetails.trim() || undefined : undefined);
+      onSaved({ ...fresh, preferences: { ...fresh.preferences, family: pref.family, pet_details } });
       setResult({ ok: true, text: 'Сохранено. Агент учтёт это в следующих подборках.' });
     } catch (e) {
       setResult({ ok: false, text: e instanceof Error ? e.message : 'Не удалось сохранить' });

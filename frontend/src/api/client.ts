@@ -111,7 +111,7 @@ export const api = {
       ),
     updateProfile: (upd: ProfileUpdate) =>
       call(
-        () => http<AuthUser>('/api/auth/profile', { method: 'PUT', body: JSON.stringify(upd) }),
+        () => http<AuthUser>('/api/user/profile', { method: 'PUT', body: JSON.stringify(upd) }),
         () => mock.mockUpdateProfile(getToken(), upd),
       ),
   },
